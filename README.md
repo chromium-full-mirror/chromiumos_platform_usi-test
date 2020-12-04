@@ -123,6 +123,6 @@ command response: 0x0008
 $ usi-test diagnostic 52 7 --preamble 2 --crc 3
 ```
 
-[command prompt]: https://chromium.googlesource.com/chromiumos/docs/+/master/developer_mode.md#shell
-[cros flash]: https://chromium.googlesource.com/chromiumos/docs/+/master/cros_flash.md
+[command prompt]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_mode.md#shell
+[cros flash]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/cros_flash.md
 [usi]: https://universalstylus.org/
