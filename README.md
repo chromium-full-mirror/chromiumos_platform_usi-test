@@ -52,12 +52,13 @@ This command will wait for the specified stylus to pair with the digitizer, so
 you can send the command without having the stylus pressed to the digitizer.
 
 The values you can query are:
-* `color`: The current color of the stylus stroke
+* `color`: The current 8-bit indexed color of the stylus stroke
+* `color24': The current 24-bit color of the stylus stroke
 * `width`: The current width of the stylus stroke
 * `style`: The current style of the stylus stroke (ink, pencil, etc.)
 * `buttons`: The mapping from physical stylus buttons to the button types they
   are set to be emulating.
-* `firmware`: The vendor ID, product ID, and firmware version of the stylus.
+* `firmware`: The vendor ID, product ID, serial number, and firmware version of the stylus.
 * `usi_version`: The USI protocol version this pen is using.
 
 examples:
@@ -77,12 +78,17 @@ you can send the command without having the stylus pressed to the digitizer.
 
 The values you can set are:
 * `--color`, `-c`: Values between 0 and 255. See the USI spec for color mapping.
+  (255 specifies no preference.)
+* `--color24`, `-C`: Values between 0x000000 and 0xFFFFFF, as 0xRRGGBB.
+* `--color24-no-preference`: Used in conjunction with `--color24`, indicates
+  that there is no preferred color.
 * `--width`, `-w`: Values between 0 and 255, in 0.1 mm increments. For example,
-  A value of 25 gives a stroke width of 2.5 mm.
-* `--style`, `-s`: Choose from ink, pencil, highlighter, marker, brush, and none
+  A value of 25 gives a stroke width of 2.5 mm. (255 specifies no preference.)
+* `--style`, `-s`: Choose from ink, pencil, highlighter, marker, brush, and none.
+  ('none' indicates no preferred style)
 * `--button`, `-b`: This option requires two arguments. It will set the first
   button argument to emulate the second button argument. The first (physical)
-  button may be (barrel, secondary, eraser), and the second (emulated) button
+  button may be (barrel, secondary, eraser/tail), and the second (emulated) button
   may be (barrel, secondary, eraser, disabled)
 
 You may set one or all of the values in the same command. The button option
@@ -109,8 +115,10 @@ the USI spec. The stylus index can be set the same as with the `get` command.
 This command expects the command ID as the first argument, and the data as the
 second argument.
 
-It will print the full reponse from the stylus, and break the response into the
+It will print the full response from the stylus, and break the response into the
 error bit, error code, and command response.
+
+If used with a display that requires USI 2.0 flex beacons, add the `--flex` argument.
 
 examples:
 ```sh
