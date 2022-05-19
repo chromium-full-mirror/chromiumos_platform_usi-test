@@ -116,48 +116,60 @@ CRC_POLYNOMIAL_LENGTH = 6
 
 # These usages only appear in a single feature report as defined by the USI
 # HID descriptor specs v1.0 & v2.0, so we can use them to search for the
-# appropriate feature reports. A tuple specifies a usage along with a
-# required bit-size.
+# appropriate feature reports. Each report has a list of relevant usages.
+# When find_feature_report_id() searches the reports, if any feature field
+# of that usage is found, that is considered a match. The usage page is 0x0D
+# if not present, while the size is ignored unless specified.
+# A match against a logical collection (instead of a feature field) is
+# specified with 'collection'.
 
 UNIQUE_REPORT_USAGES = {
     'color': [ # Classic 1.0 8-bit indexed color
-        (0x5c, 8),  # Preferred color, must be 8-bits
+        # Preferred color, must be 8-bits
+        {'usage': 0x5c, 'size': 8},
     ],
     'color24': [ # Additional RGB report for for USI 2.0
-        (0x5c, 24),  # Preferred color, must be 24-bits
+        # Preferred color, must be 24-bits
+        {'usage': 0x5c, 'size': 24},
     ],
     'width': [
-        0x5e,  # Preferred line width
-        0x5f   # Preferred line width is locked
+        {'usage': 0x5e},  # Preferred line width
+        {'usage': 0x5f},  # Preferred line width is locked
     ],
     'style': [
-        0x70,  # Preferred line style
-        0x71,  # Preferred line style is locked
-        0x72,  # Ink
-        0x73,  # Pencil
-        0x74,  # Highlighter
-        0x75,  # Chisel Marker
-        0x76,  # Brush
-        0x77   # No preferred line style
+        {'usage': 0x70},  # Preferred line style
+        {'usage': 0x71},  # Preferred line style is locked
+        {'usage': 0x72},  # Ink
+        {'usage': 0x73},  # Pencil
+        {'usage': 0x74},  # Highlighter
+        {'usage': 0x75},  # Chisel Marker
+        {'usage': 0x76},  # Brush
+        {'usage': 0x77},  # No preferred line style
     ],
     'buttons': [
-        0xa4,  # Switch unimplemented
-        0x44,  # Barrel switch
-        0x5a,  # Secondary barrel switch
-        0x45,  # Eraser
-        0xa3   # Switch disabled
+        {'usage': 0xa4},  # Switch unimplemented
+        {'usage': 0x44},  # Barrel switch
+        {'usage': 0x5a},  # Secondary barrel switch
+        {'usage': 0x45},  # Eraser
+        {'usage': 0xa3},  # Switch disabled
     ],
     'firmware': [
-        0x90,  # Transducer software info
-        0x91,  # Transducer vendor ID
-        0x92,  # Transducer product ID
-        0x2a   # Software version
+        {'usage': 0x90},  # Transducer software info
+        {'usage': 0x91},  # Transducer vendor ID
+        {'usage': 0x92},  # Transducer product ID
+        {'usage': 0x2a},  # Software version
     ],
-    'usi_version': [0x2b],  # Protocol version
-    'diagnostic': [0x80],  # Digitizer Diagnostic
-    'index-2': [0xa6],  # Transducer index selector for USI 2.0
-    'index-1': [0x38],  # Transducer Index for USI 1.0; this usage is not
-                        # unique: see set_stylus_index below for more info.
+    'usi_version': [
+        # Protocol version, Generic Device Controls
+        {'page': 0x06,
+         'usage': 0x2b,
+         'collection': True},
+    ],
+    'diagnostic': [{ 'usage': 0x80}],  # Digitizer Diagnostic
+    'index-2': [{'usage': 0xa6}],  # Transducer index selector for USI 2.0
+    'index-1': [{'usage': 0x38}],  # Transducer Index for USI 1.0; this usage
+                                   # is not unique: see set_stylus_index below
+                                   # for more info.
 }
 
 # ioctl definitions from <ioctl.h>
@@ -235,10 +247,21 @@ def easy_HIDIOCGFEATURE(device, buf):
     return (result, buf)
 
 def match_unique_usage(rdesc_item, state, feature_name):
-    if state['page'] != DIGITIZER_USAGE_PAGE:
-        return False
-    return (state['usage'] in UNIQUE_REPORT_USAGES[feature_name]
-            or (state['usage'], state['size']) in UNIQUE_REPORT_USAGES[feature_name])
+    for match in UNIQUE_REPORT_USAGES[feature_name]:
+        if 'collection' not in match and rdesc_item.item != 'Feature':
+            continue
+        if 'collection' in match and rdesc_item.item != 'Collection':
+            continue
+        if match['usage'] != state['usage']:
+            continue
+        if 'page' not in match and state['page'] != DIGITIZER_USAGE_PAGE:
+            continue
+        if 'page' in match and state['page'] != match['page']:
+            continue
+        if 'size' in match and state['size'] != match['size']:
+            continue
+        return True
+    return False
 
 def find_feature_report_id(rdesc, feature_name, max_fields=None):
     """Find the correct report ID for the feature.
@@ -289,6 +312,9 @@ def find_feature_report_id(rdesc, feature_name, max_fields=None):
             state['page'] = item.value
         elif item.item == 'Feature':
             field_count = field_count + state['count']
+            if match_unique_usage(item, state, feature_name):
+                usage_found = True
+        elif item.item == 'Collection':
             if match_unique_usage(item, state, feature_name):
                 usage_found = True
         elif item.item == 'Input' or item.item == 'Output':
